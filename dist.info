@@ -1,0 +1,29 @@
+type = "x86"
+arch = "Windows"
+author = "David Kolf"
+depends = {
+[[lua >= 5.1]],
+}
+
+desc = "dkjson is a module for encoding and decoding JSON data. It supports UTF-8."
+version = "2.2"
+maintainer = "Peter Drahoš"
+files = {
+Example = {
+[[share\dkjson\example\jsontest.lua]],
+[[share\dkjson\example\speedtest.lua]],
+}
+,
+Data = {
+[[share\dkjson\versions.txt]],
+}
+,
+Unspecified = {
+[[lib\lua\dkjson.lua]],
+}
+,
+}
+
+license = "MIT/X11"
+name = "dkjson"
+url = "http://chiselapp.com/user/dhkolf/repository/dkjson/"
