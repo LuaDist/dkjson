@@ -19,11 +19,28 @@ local test_module, opt = ... -- command line argument
 
 --local opt = "refcycle" -- What happens when a reference cycle gets encoded?
 
+local testlocale = "de_DE.UTF8"
+
+local function inlocale(fn)
+  local oldloc = os.setlocale(nil, 'numeric')
+  if not os.setlocale(testlocale, 'numeric') then
+    print("test could not switch to locale "..testlocale)
+  else
+    fn()
+  end
+  os.setlocale(oldloc, 'numeric')
+end
+
 if test_module == 'dkjson-nopeg' then
   test_module = 'dkjson'
   package.preload["lpeg"] = function () error "lpeg disabled" end
   package.loaded["lpeg"] = nil
   lpeg = nil
+end
+
+if test_module == 'dkjson-lulpeg' then
+  test_module = 'dkjson'
+  package.loaded["lpeg"] = require "lulpeg"
 end
 
 do
@@ -34,6 +51,7 @@ do
 end
 
 if test_module == 'cmj-json' then
+  -- https://github.com/craigmj/json4lua/
   -- http://json.luaforge.net/
   local json = require "cmjjson" -- renamed, the original file was just 'json'
   encode = json.encode
@@ -72,6 +90,7 @@ elseif test_module == 'sb-json' then
   encode = json.Encode
   decode = json.Decode
 elseif test_module == 'th-json' then
+  -- https://github.com/harningt/luajson
   -- http://luaforge.net/projects/luajson/
   local json = require "json"
   encode = json.encode
@@ -86,24 +105,30 @@ if not encode then
 else
   local x, r
 
-  local function test (x, s)
-    return string.match(x, "^%s*%[%s*%\"" .. s .. "%\"%s*%]%s*$")
+  local escapecodes = {
+    ["\""] = "\\\"", ["\\"] = "\\\\", ["\b"] = "\\b", ["\f"] = "\\f",
+    ["\n"] = "\\n",  ["\r"] = "\\r",  ["\t"] = "\\t", ["/"] = "\\/"
+  }
+  local function test (x, n, expect)
+    local enc = encode{ x }:match("^%s*%[%s*%\"(.-)%\"%s*%]%s*$")
+    if not enc or (escapecodes[x] ~= enc
+        and ("\\u%04x"):format(n) ~= enc:gsub("[A-F]", string.lower)
+        and not (expect and enc:match("^"..expect.."$"))) then
+      print(("U+%04X isn't encoded correctly: %q"):format(n, enc))
+    end
   end
 
-  x = encode{ "'" }
-  if not test(x, "%'") then
-    print("\"'\" isn't encoded correctly:", x)
+  -- necessary escapes for JSON:
+  for i = 0,31 do
+    test(string.char(i), i)
   end
-
-  x = encode{ "\011" }
-  if not test(x, "%\\u000[bB]") then
-    print("\\u000b isn't encoded correctly:", x)
-  end
-
-  x = encode{ "\000" }
-  if not test(x, "%\\u0000") then
-    print("\\u0000 isn't encoded correctly")
-  end
+  test("\"", ("\""):byte())
+  test("\\", ("\\"):byte())
+  -- necessary escapes for JavaScript:
+  test("\226\128\168", 0x2028)
+  test("\226\128\169", 0x2029)
+  -- invalid escapes that were seen in the wild:
+  test("'", ("'"):byte(), "%'")
 
   r,x = pcall (encode, { [1000] = "x" })
   if not r then
@@ -175,6 +200,15 @@ else
       end
     end
   end
+
+  inlocale(function ()
+    local r, x = pcall(encode, { 0.5 })
+    if not r then
+      print("encoding 0.5 in locale raises an error:", x)
+    elseif not x:find(".", 1, true) then
+      print("In locale 0.5 isn't converted into valid JSON:", x)
+    end
+  end)
 end
 
 if not decode then
@@ -253,13 +287,26 @@ else
     print ("1e+2 decoded incorrectly:", r[1])
   end
 
+  inlocale(function ()
+    local r, x = pcall(decode, "[0.5]")
+    if not r then
+      print("decoding 0.5 in locale raises an error:", x)
+    elseif not x then
+      print("cannot decode 0.5 in locale")
+    elseif x[1] ~= 0.5 then
+      print("decoded 0.5 incorrectly in locale:", x[1])
+    end
+  end)
+
   -- special tests for dkjson:
   if test_module == 'dkjson' then
     x = dkdecode[=[ [{"x":0}] ]=]
-    if getmetatable(x).__jsontype ~= 'array' then
+    local m = getmetatable(x)
+    if not m or m.__jsontype ~= 'array' then
       print ("<metatable>.__jsontype ~= array")
     end
-    if getmetatable(x[1]).__jsontype ~= 'object' then
+    local m = getmetatable(x[1])
+    if not m or m.__jsontype ~= 'object' then
       print ("<metatable>.__jsontype ~= object")
     end
     
@@ -339,6 +386,29 @@ local function escapeutf8 (uchar)
   end
 end
 
+  local isspecial = {}
+  local unifile = io.open("UnicodeData.txt")
+  if unifile then
+    -- <http://www.unicode.org/Public/UNIDATA/UnicodeData.txt>
+    -- each line consists of 15 parts for each defined codepoints
+    local pat = {}
+    for i = 1,14 do
+      pat[i] = "[^;]*;"
+    end
+    pat[1] = "([^;]*);" -- Codepoint
+    pat[3] = "([^;]*);" -- Category
+    pat[15] = "[^;]*"
+    pat = table.concat(pat)
+
+    for line in unifile:lines() do
+      local cp, cat = line:match(pat)
+      if cat:match("^C[^so]") or cat:match("^Z[lp]") then
+        isspecial[tonumber(cp, 16)] = cat
+      end
+    end
+    unifile:close()
+  end
+
   local x,xe
 
   local t = {}
@@ -360,7 +430,6 @@ end
     elseif x == escapecodes[t[1]] then
       esc[i] = 'c'
     elseif x:sub(1,1) == "\\" then
-      --print ("Invalid escape code for "..i..":", x)
       escerr[i] = xe
     end
   end
@@ -368,17 +437,34 @@ end
     local i = 0
     while i <= range do
       local first
-      while i <= range and not esc[i] do i = i + 1 end
-      if not esc[i] then break end
+      while i <= range and not (esc[i] or isspecial[i]) do i = i + 1 end
+      if i > range then break end
       first = i
-      while esc[i] do i = i + 1 end
-      if i-1 > first then
-        print ("Escaped from "..first.." to "..i-1)
-      else
-        if first >= 32 and first <= 127 then
-          print ("Escaped "..first.." ("..string.char(first)..")")
+      local special = isspecial[i]
+      if esc[i] and special then
+        while esc[i] and isspecial[i] == special do i = i + 1 end
+        if i-1 > first then
+          print (("Escaped %s characters from U+%04X to U+%04X"):format(special,first,i-1))
         else
-          print ("Escaped "..first)
+          print (("Escaped %s character U+%04X"):format(special,first))
+        end
+      elseif esc[i] then
+        while esc[i] and not isspecial[i] do i = i + 1 end
+        if i-1 > first then
+          print (("Escaped from U+%04X to U+%04X"):format(first,i-1))
+        else
+          if first >= 32 and first <= 127 then
+            print (("Escaped U+%04X (%c)"):format(first,first))
+          else
+            print (("Escaped U+%04X"):format(first))
+          end
+        end
+      elseif special then
+        while not esc[i] and isspecial[i] == special do i = i + 1 end
+        if i-1 > first then
+          print (("Unescaped %s characters from U+%04X to U+%04X"):format(special,first,i-1))
+        else
+          print (("Unescaped %s character U+%04X"):format(special,first))
         end
       end
     end
@@ -392,9 +478,9 @@ end
       first = i
       while escerr[i] do i = i + 1 end
       if i-1 > first then
-        print ("Errors while escaping from "..first.." to "..i-1)
+        print (("Errors while escaping from U+%04X to U+%04X"):format(first, i-1))
       else
-        print ("Errors while escaping "..first)
+        print (("Errors while escaping U+%04X"):format(first))
       end
     end
   end
