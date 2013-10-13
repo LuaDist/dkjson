@@ -1,17 +1,25 @@
     -- Module options:
     local always_try_using_lpeg = true
+    local register_global_module_table = false
+    local global_module_name = 'json'
 
     --[==[
 
 David Kolf's JSON module for Lua 5.1/5.2
 ========================================
 
-*Version 2.2*
+*Version 2.4*
 
-This module writes no global values, not even the module table.
-Import it using
+In the default configuration this module writes no global values, not even
+the module table. Import it using
 
     json = require ("dkjson")
+
+In environments where `require` or a similiar function are not available
+and you cannot receive the return value of the module, you can set the
+option `register_global_module_table` to `true`.  The module table will
+then be saved in the global variable with the name given by the option
+`global_module_name`.
 
 Exported functions and values:
 
@@ -105,7 +113,7 @@ You can use this value for setting explicit `null` values.
 `json.version`
 --------------
 
-Set to `"dkjson 2.2"`.
+Set to `"dkjson 2.4"`.
 
 `json.quotestring (string)`
 ---------------------------
@@ -159,12 +167,12 @@ This variable is set to `true` when LPeg was loaded successfully.
 Contact
 -------
 
-You can contact the author by sending an e-mail to 'kolf' at the
-e-mail provider 'gmx.de'.
+You can contact the author by sending an e-mail to 'david' at the
+domain 'dkolf.de'.
 
 ---------------------------------------------------------------------
 
-*Copyright (C) 2010, 2011, 2012 David Heiko Kolf*
+*Copyright (C) 2010-2013 David Heiko Kolf*
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -192,7 +200,7 @@ SOFTWARE.
      it isn't a valid HTML comment (and wastes space).
   -->
 
-  <!--]==]
+<!--]==]
 
 -- global dependencies:
 local pairs, type, tostring, tonumber, getmetatable, setmetatable, rawset =
@@ -202,11 +210,16 @@ local floor, huge = math.floor, math.huge
 local strrep, gsub, strsub, strbyte, strchar, strfind, strlen, strformat =
       string.rep, string.gsub, string.sub, string.byte, string.char,
       string.find, string.len, string.format
+local strmatch = string.match
 local concat = table.concat
 
-local _ENV = nil -- blocking globals in Lua 5.2
+local json = { version = "dkjson 2.4" }
 
-local json = { version = "dkjson 2.2" }
+if register_global_module_table then
+  _G[global_module_name] = json
+end
+
+local _ENV = nil -- blocking globals in Lua 5.2
 
 pcall (function()
   -- Enable access to blocked metatables.
@@ -297,14 +310,47 @@ local function quotestring (value)
     value = fsub (value, "\216[\128-\132]", escapeutf8)
     value = fsub (value, "\220\143", escapeutf8)
     value = fsub (value, "\225\158[\180\181]", escapeutf8)
-    value = fsub (value, "\226\128[\140-\143\168\175]", escapeutf8)
+    value = fsub (value, "\226\128[\140-\143\168-\175]", escapeutf8)
     value = fsub (value, "\226\129[\160-\175]", escapeutf8)
     value = fsub (value, "\239\187\191", escapeutf8)
-    value = fsub (value, "\239\191[\176\191]", escapeutf8)
+    value = fsub (value, "\239\191[\176-\191]", escapeutf8)
   end
   return "\"" .. value .. "\""
 end
 json.quotestring = quotestring
+
+local function replace(str, o, n)
+  local i, j = strfind (str, o, 1, true)
+  if i then
+    return strsub(str, 1, i-1) .. n .. strsub(str, j+1, -1)
+  else
+    return str
+  end
+end
+
+-- locale independent num2str and str2num functions
+local decpoint, numfilter
+
+local function updatedecpoint ()
+  decpoint = strmatch(tostring(0.5), "([^05+])")
+  -- build a filter that can be used to remove group separators
+  numfilter = "[^0-9%-%+eE" .. gsub(decpoint, "[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0") .. "]+"
+end
+
+updatedecpoint()
+
+local function num2str (num)
+  return replace(fsub(tostring(num), numfilter, ""), decpoint, ".")
+end
+
+local function str2num (str)
+  local num = tonumber(replace(str, ".", decpoint))
+  if not num then
+    updatedecpoint()
+    num = tonumber(replace(str, ".", decpoint))
+  end
+  return num
+end
 
 local function addnewline2 (level, buffer, buflen)
   buffer[buflen+1] = "\n"
@@ -370,7 +416,7 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
       -- This is the behaviour of the original JSON implementation.
       s = "null"
     else
-      s = tostring (value)
+      s = num2str (value)
     end
     buflen = buflen + 1
     buffer[buflen] = s
@@ -452,6 +498,7 @@ function json.encode (value, state)
   state = state or {}
   local oldbuffer = state.buffer
   local buffer = oldbuffer or {}
+  updatedecpoint()
   local ret, msg = encode2 (value, state.indent, state.level or 0,
                    buffer, state.bufferlen or 0, state.tables or {}, state.keyorder)
   if not ret then
@@ -647,7 +694,7 @@ scanvalue = function (str, pos, nullval, objectmeta, arraymeta)
   else
     local pstart, pend = strfind (str, "^%-?[%d%.]+[eE]?[%+%-]?%d*", pos)
     if pstart then
-      local number = tonumber (strsub (str, pstart, pend))
+      local number = str2num (strsub (str, pstart, pend))
       if number then
         return number, pend + 1
       end
@@ -682,8 +729,13 @@ end
 
 function json.use_lpeg ()
   local g = require ("lpeg")
+
+  if g.version() == "0.11" then
+    error "due to a bug in LPeg 0.11, it cannot be used for JSON matching"
+  end
+
   local pegmatch = g.match
-  local P, S, R, V = g.P, g.S, g.R, g.V
+  local P, S, R = g.P, g.S, g.R
 
   local function ErrorCall (str, pos, msg, state)
     if not state.msg then
@@ -720,7 +772,7 @@ function json.use_lpeg ()
   local Integer = P"-"^(-1) * (P"0" + (R"19" * R"09"^0))
   local Fractal = P"." * R"09"^0
   local Exponent = (S"eE") * (S"+-")^(-1) * R"09"^1
-  local Number = (Integer * Fractal^(-1) * Exponent^(-1))/tonumber
+  local Number = (Integer * Fractal^(-1) * Exponent^(-1))/str2num
   local Constant = P"true" * g.Cc (true) + P"false" * g.Cc (false) + P"null" * g.Carg (1)
   local SimpleValue = Number + String + Constant
   local ArrayContent, ObjectContent
