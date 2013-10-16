@@ -1,3 +1,41 @@
+Version 2.4 (2013-09-28)
+===========
+
+Changes since version 2.3:
+
+  *  Fixed encoding and decoding of numbers in different numeric locales.
+  *  Prevent using version 0.11 of LPeg (causes segmentation faults on
+     some systems).
+
+Version 1.3 (2013-09-28)
+===========
+
+Changes since version 1.2:
+
+  *  Fixed encoding and decoding of numbers in different numeric locales.
+
+Version 2.3 (2013-04-14)
+===========
+
+Changes since version 2.2:
+
+  *  Corrected the range of escaped characters.  Among other characters
+     U+2029 was missing, which would cause trouble when parsed by a
+     JavaScript interpreter.
+  *  Added options to register the module table in a global variable.
+     This is useful in environments where functions similar to require are
+     not available.
+
+Version 1.2 (2013-04-14)
+===========
+
+Changes since version 1.1:
+
+  *  Corrected the range of escaped characters.  Among other characters
+     U+2029 was missing, which would cause trouble when parsed by a
+     JavaScript interpreter.
+  *  Locations for error messages were off by one in the first line.
+
 Version 2.2 (2012-04-28)
 ===========
 
