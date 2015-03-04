@@ -1,55 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<base href="http://dkolf.de/src/dkjson-lua.fsl/artifact" />
-<title>Artifact Content - dkjson</title>
-<link rel="alternate" type="application/rss+xml" title="RSS Feed"
-      href="/src/dkjson-lua.fsl/timeline.rss" />
-<link rel="stylesheet" href="/src/dkjson-lua.fsl/style.css?default" type="text/css"
-      media="screen" />
-</head>
-<body>
-  <h1>Artifact Content &mdash; dkjson</h1>
-<div class="mainmenu">
-<a href='/'>dkolf.de</a>
-<a href='/src/dkjson-lua.fsl/home'>dkjson</a>
-<a href='/src/dkjson-lua.fsl/timeline'>Timeline</a>
-<a href='/src/dkjson-lua.fsl/brlist'>Branches</a>
-<a href='/src/dkjson-lua.fsl/taglist'>Tags</a>
-<a href='/src/dkjson-lua.fsl/wiki'>Wiki</a>
-<a href='/src/dkjson-lua.fsl/login'>Login</a>
-</div>
-<div class="submenu">
-<a class="label" href="/src/dkjson-lua.fsl/timeline?n=200&amp;uf=14fd609d5835b5c808632c2ef0d11c6a92e8f967">Checkins Using</a>
-<a class="label" href="/src/dkjson-lua.fsl/raw/readme.txt?name=14fd609d5835b5c808632c2ef0d11c6a92e8f967">Download</a>
-<a class="label" href="/src/dkjson-lua.fsl/hexdump?name=14fd609d5835b5c808632c2ef0d11c6a92e8f967">Hex</a>
-</div>
-<div class="content">
-<script>
-function gebi(x){
-if(/^#/.test(x)) x = x.substr(1);
-var e = document.getElementById(x);
-if(!e) throw new Error("Expecting element with ID "+x);
-else return e;}
-</script>
-<h2>Artifact 14fd609d5835b5c808632c2ef0d11c6a92e8f967:</h2>
-<ul>
-<li>File
-<a id='a1' href='/src/dkjson-lua.fsl/honeypot'>readme.txt</a>
-<ul>
-<li>
-2014-04-28 21:16:16
-- part of checkin
-<span class="timelineHistDsp">[3d24a61dd0]</span>
-on branch <a id='a2' href='/src/dkjson-lua.fsl/honeypot'>trunk</a>
-- fix line breaks in readme.txt, fix release year
- (user:
-dhkolf
-</ul>
-</ul>
-<hr />
-<blockquote>
-<pre>
 David Kolf's JSON module for Lua 5.1/5.2
 ========================================
 
@@ -58,7 +6,7 @@ David Kolf's JSON module for Lua 5.1/5.2
 In the default configuration this module writes no global values, not even
 the module table. Import it using
 
-    json = require (&quot;dkjson&quot;)
+    json = require ("dkjson")
 
 In environments where `require` or a similiar function are not available
 and you cannot receive the return value of the module, you can set the
@@ -107,8 +55,8 @@ cycles.
     When `exception` is given, it will be called whenever the encoder
     cannot encode a given value.  
     The parameters are `reason`, `value`, `state` and `defaultmessage`.
-    `reason` is either `&quot;reference cycle&quot;`, `&quot;custom encoder failed&quot;` or
-    `&quot;unsupported type&quot;`. `value` is the original value that caused the
+    `reason` is either `"reference cycle"`, `"custom encoder failed"` or
+    `"unsupported type"`. `value` is the original value that caused the
     exception, `state` is this state table, `defaultmessage` is the message
     of the error that would usually be raised.  
     You can either return `true` and add directly to the buffer or you can
@@ -144,18 +92,18 @@ To prevent the assigning of metatables pass `nil`:
 
     json.decode (string, position, null, nil)
 
-`&lt;metatable&gt;.__jsonorder`
+`<metatable>.__jsonorder`
 -------------------------
 
 `__jsonorder` can overwrite the `keyorder` for a specific table.
 
-`&lt;metatable&gt;.__jsontype`
+`<metatable>.__jsontype`
 ------------------------
 
-`__jsontype` can be either `&quot;array&quot;` or `&quot;object&quot;`. This value is only
-checked for empty tables. (The default for empty tables is `&quot;array&quot;`).
+`__jsontype` can be either `"array"` or `"object"`. This value is only
+checked for empty tables. (The default for empty tables is `"array"`).
 
-`&lt;metatable&gt;.__tojson (self, state)`
+`<metatable>.__tojson (self, state)`
 ------------------------------------
 
 You can provide your own `__tojson` function in a metatable. In this
@@ -171,7 +119,7 @@ You can use this value for setting explicit `null` values.
 `json.version`
 --------------
 
-Set to `&quot;dkjson 2.5&quot;`.
+Set to `"dkjson 2.5"`.
 
 `json.quotestring (string)`
 ---------------------------
@@ -201,7 +149,7 @@ LPeg support
 When the local configuration variable `always_try_using_lpeg` is set,
 this module tries to load LPeg to replace the `decode` function. The
 speed increase is significant. You can get the LPeg module at
-  &lt;http://www.inf.puc-rio.br/~roberto/lpeg/&gt;.
+  <http://www.inf.puc-rio.br/~roberto/lpeg/>.
 When LPeg couldn't be loaded, the pure Lua functions stay active.
 
 In case you don't want this module to require LPeg on its own,
@@ -217,12 +165,12 @@ and `decode` with functions that use LPeg patterns.
 This function returns the module table, so you can load the module
 using:
 
-    json = require &quot;dkjson&quot;.use_lpeg()
+    json = require "dkjson".use_lpeg()
 
 Alternatively you can use `pcall` so the JSON module still works when
 LPeg isn't found.
 
-    json = require &quot;dkjson&quot;
+    json = require "dkjson"
     pcall (json.use_lpeg)
 
 ### `json.using_lpeg`
@@ -243,7 +191,7 @@ domain 'dkolf.de'.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
-&quot;Software&quot;), to deal in the Software without restriction, including
+"Software"), to deal in the Software without restriction, including
 without limitation the rights to use, copy, modify, merge, publish,
 distribute, sublicense, and/or sell copies of the Software, and to
 permit persons to whom the Software is furnished to do so, subject to
@@ -252,7 +200,7 @@ the following conditions:
 The above copyright notice and this permission notice shall be
 included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND,
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
 NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
@@ -261,13 +209,3 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-</pre>
-</blockquote>
-</div>
-<div class="footer">
-  <a href="./">dkolf.de</a>
-  <a href="/contact">contact</a>
-  (This page was generated by <a class="extlink" href="http://www.fossil-scm.org/">Fossil</a>.)
-</div>
-</body></html>
