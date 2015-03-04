@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base href="http://dkolf.de/src/dkjson-lua.fsl/artifact" />
+<title>Artifact Content - dkjson</title>
+<link rel="alternate" type="application/rss+xml" title="RSS Feed"
+      href="/src/dkjson-lua.fsl/timeline.rss" />
+<link rel="stylesheet" href="/src/dkjson-lua.fsl/style.css?default" type="text/css"
+      media="screen" />
+</head>
+<body>
+  <h1>Artifact Content &mdash; dkjson</h1>
+<div class="mainmenu">
+<a href='/'>dkolf.de</a>
+<a href='/src/dkjson-lua.fsl/home'>dkjson</a>
+<a href='/src/dkjson-lua.fsl/timeline'>Timeline</a>
+<a href='/src/dkjson-lua.fsl/brlist'>Branches</a>
+<a href='/src/dkjson-lua.fsl/taglist'>Tags</a>
+<a href='/src/dkjson-lua.fsl/wiki'>Wiki</a>
+<a href='/src/dkjson-lua.fsl/login'>Login</a>
+</div>
+<div class="submenu">
+<a class="label" href="/src/dkjson-lua.fsl/timeline?n=200&amp;uf=14fd609d5835b5c808632c2ef0d11c6a92e8f967">Checkins Using</a>
+<a class="label" href="/src/dkjson-lua.fsl/raw/readme.txt?name=14fd609d5835b5c808632c2ef0d11c6a92e8f967">Download</a>
+<a class="label" href="/src/dkjson-lua.fsl/hexdump?name=14fd609d5835b5c808632c2ef0d11c6a92e8f967">Hex</a>
+</div>
+<div class="content">
+<script>
+function gebi(x){
+if(/^#/.test(x)) x = x.substr(1);
+var e = document.getElementById(x);
+if(!e) throw new Error("Expecting element with ID "+x);
+else return e;}
+</script>
+<h2>Artifact 14fd609d5835b5c808632c2ef0d11c6a92e8f967:</h2>
+<ul>
+<li>File
+<a id='a1' href='/src/dkjson-lua.fsl/honeypot'>readme.txt</a>
+<ul>
+<li>
+2014-04-28 21:16:16
+- part of checkin
+<span class="timelineHistDsp">[3d24a61dd0]</span>
+on branch <a id='a2' href='/src/dkjson-lua.fsl/honeypot'>trunk</a>
+- fix line breaks in readme.txt, fix release year
+ (user:
+dhkolf
+</ul>
+</ul>
+<hr />
+<blockquote>
+<pre>
+David Kolf's JSON module for Lua 5.1/5.2
+========================================
+
+*Version 2.5*
+
+In the default configuration this module writes no global values, not even
+the module table. Import it using
+
+    json = require (&quot;dkjson&quot;)
+
+In environments where `require` or a similiar function are not available
+and you cannot receive the return value of the module, you can set the
+option `register_global_module_table` to `true`.  The module table will
+then be saved in the global variable with the name given by the option
+`global_module_name`.
+
+Exported functions and values:
+
+`json.encode (object [, state])`
+--------------------------------
+
+Create a string representing the object. `Object` can be a table,
+a string, a number, a boolean, `nil`, `json.null` or any object with
+a function `__tojson` in its metatable. A table can only use strings
+and numbers as keys and its values have to be valid objects as
+well. It raises an error for any invalid data types or reference
+cycles.
+
+`state` is an optional table with the following fields:
+
+  - `indent`  
+    When `indent` (a boolean) is set, the created string will contain
+    newlines and indentations. Otherwise it will be one long line.
+  - `keyorder`  
+    `keyorder` is an array to specify the ordering of keys in the
+    encoded output. If an object has keys which are not in this array
+    they are written after the sorted keys.
+  - `level`  
+    This is the initial level of indentation used when `indent` is
+    set. For each level two spaces are added. When absent it is set
+    to 0.
+  - `buffer`  
+    `buffer` is an array to store the strings for the result so they
+    can be concatenated at once. When it isn't given, the encode
+    function will create it temporary and will return the
+    concatenated result.
+  - `bufferlen`  
+    When `bufferlen` is set, it has to be the index of the last
+    element of `buffer`.
+  - `tables`  
+    `tables` is a set to detect reference cycles. It is created
+    temporary when absent. Every table that is currently processed
+    is used as key, the value is `true`.
+  - `exception`  
+    When `exception` is given, it will be called whenever the encoder
+    cannot encode a given value.  
+    The parameters are `reason`, `value`, `state` and `defaultmessage`.
+    `reason` is either `&quot;reference cycle&quot;`, `&quot;custom encoder failed&quot;` or
+    `&quot;unsupported type&quot;`. `value` is the original value that caused the
+    exception, `state` is this state table, `defaultmessage` is the message
+    of the error that would usually be raised.  
+    You can either return `true` and add directly to the buffer or you can
+    return the string directly. To keep raising an error return `nil` and
+    the desired error message.  
+    An example implementation for an exception function is given in
+    `json.encodeexception`.
+
+When `state.buffer` was set, the return value will be `true` on
+success. Without `state.buffer` the return value will be a string.
+
+`json.decode (string [, position [, null]])`
+--------------------------------------------
+
+Decode `string` starting at `position` or at 1 if `position` was
+omitted.
+
+`null` is an optional value to be returned for null values. The
+default is `nil`, but you could set it to `json.null` or any other
+value.
+
+The return values are the object or `nil`, the position of the next
+character that doesn't belong to the object, and in case of errors
+an error message.
+
+Two metatables are created. Every array or object that is decoded gets
+a metatable with the `__jsontype` field set to either `array` or
+`object`. If you want to provide your own metatables use the syntax
+
+    json.decode (string, position, null, objectmeta, arraymeta)
+
+To prevent the assigning of metatables pass `nil`:
+
+    json.decode (string, position, null, nil)
+
+`&lt;metatable&gt;.__jsonorder`
+-------------------------
+
+`__jsonorder` can overwrite the `keyorder` for a specific table.
+
+`&lt;metatable&gt;.__jsontype`
+------------------------
+
+`__jsontype` can be either `&quot;array&quot;` or `&quot;object&quot;`. This value is only
+checked for empty tables. (The default for empty tables is `&quot;array&quot;`).
+
+`&lt;metatable&gt;.__tojson (self, state)`
+------------------------------------
+
+You can provide your own `__tojson` function in a metatable. In this
+function you can either add directly to the buffer and return true,
+or you can return a string. On errors nil and a message should be
+returned.
+
+`json.null`
+-----------
+
+You can use this value for setting explicit `null` values.
+
+`json.version`
+--------------
+
+Set to `&quot;dkjson 2.5&quot;`.
+
+`json.quotestring (string)`
+---------------------------
+
+Quote a UTF-8 string and escape critical characters using JSON
+escape sequences. This function is only necessary when you build
+your own `__tojson` functions.
+
+`json.addnewline (state)`
+-------------------------
+
+When `state.indent` is set, add a newline to `state.buffer` and spaces
+according to `state.level`.
+
+`json.encodeexception (reason, value, state, defaultmessage)`
+-------------------------------------------------------------
+
+This function can be used as value to the `exception` option. Instead of
+raising an error this function encodes the error message as a string. This
+can help to debug malformed input data.
+
+    x = json.encode(value, { exception = json.encodeexception })
+
+LPeg support
+------------
+
+When the local configuration variable `always_try_using_lpeg` is set,
+this module tries to load LPeg to replace the `decode` function. The
+speed increase is significant. You can get the LPeg module at
+  &lt;http://www.inf.puc-rio.br/~roberto/lpeg/&gt;.
+When LPeg couldn't be loaded, the pure Lua functions stay active.
+
+In case you don't want this module to require LPeg on its own,
+disable the option `always_try_using_lpeg` in the options section at
+the top of the module.
+
+In this case you can later load LPeg support using
+
+### `json.use_lpeg ()`
+
+Require the LPeg module and replace the functions `quotestring` and
+and `decode` with functions that use LPeg patterns.
+This function returns the module table, so you can load the module
+using:
+
+    json = require &quot;dkjson&quot;.use_lpeg()
+
+Alternatively you can use `pcall` so the JSON module still works when
+LPeg isn't found.
+
+    json = require &quot;dkjson&quot;
+    pcall (json.use_lpeg)
+
+### `json.using_lpeg`
+
+This variable is set to `true` when LPeg was loaded successfully.
+
+---------------------------------------------------------------------
+
+Contact
+-------
+
+You can contact the author by sending an e-mail to 'david' at the
+domain 'dkolf.de'.
+
+---------------------------------------------------------------------
+
+*Copyright (C) 2010-2014 David Heiko Kolf*
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+&quot;Software&quot;), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+</pre>
+</blockquote>
+</div>
+<div class="footer">
+  <a href="./">dkolf.de</a>
+  <a href="/contact">contact</a>
+  (This page was generated by <a class="extlink" href="http://www.fossil-scm.org/">Fossil</a>.)
+</div>
+</body></html>

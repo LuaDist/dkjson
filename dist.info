@@ -1,7 +1,7 @@
 --- This file is part of LuaDist project
 
 name = "dkjson"
-version = "2.4"
+version = "2.5"
 
 desc = "dkjson is a module for encoding and decoding JSON data. It supports UTF-8."
 author = "David Kolf"
