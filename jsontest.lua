@@ -12,6 +12,7 @@ local test_module, opt = ... -- command line argument
 --local test_module = 'nm-json'
 --local test_module = 'sb-json'
 --local test_module = 'th-json'
+test_module = test_module or 'dkjson'
 
 --local opt = "esc" -- Test which characters in the BMP get escaped and whether this is correct
 --local opt = "esc_full" -- Full range from 0 to 0x10ffff
@@ -209,6 +210,122 @@ else
       print("In locale 0.5 isn't converted into valid JSON:", x)
     end
   end)
+
+  -- special tests for dkjson:
+  if test_module == 'dkjson' then
+    do -- encode a function
+      local why, value, exstate
+      local state = {
+        exception = function (w, v, s)
+          why, value, exstate = w, v, s
+          return "\"demo\""
+        end
+      }
+      local encfunction = function () end
+      r, x = pcall(dkencode, { encfunction }, state )
+      if not r then
+        print("encoding a function with exception handler raises an error:", x)
+      else
+        if x ~= "[\"demo\"]" then
+          print("expected to see output of exception handler for type exception, but got", x)
+        end
+        if why ~= "unsupported type" then
+          print("expected exception reason to be 'unsupported type' for type exception")
+        end
+        if value ~= encfunction then
+          print("expected to recieve value for type exception")
+        end
+        if exstate ~= state then
+          print("expected to recieve state for type exception")
+        end
+      end
+
+      r, x = pcall(dkencode, { function () end }, {
+        exception = function (w, v, s)
+          return nil, "demo"
+        end
+      })
+      if r or x ~= "demo" then
+        print("expected custom error for type exception, but got:", r, x)
+      end
+
+      r, x = pcall(dkencode, { function () end }, {
+        exception = function (w, v, s)
+          return nil
+        end
+      })
+      if r or x ~= "type 'function' is not supported by JSON." then
+        print("expected default error for type exception, but got:", r, x)
+      end
+    end
+
+    do -- encode a reference cycle
+      local why, value, exstate
+      local state = {
+        exception = function (w, v, s)
+          why, value, exstate = w, v, s
+          return "\"demo\""
+        end
+      }
+      local a = {}
+      a[1] = a
+      r, x = pcall(dkencode, a, state )
+      if not r then
+        print("encoding a reference cycle with exception handler raises an error:", x)
+      else
+        if x ~= "[\"demo\"]" then
+          print("expected to see output of exception handler for reference cycle exception, but got", x)
+        end
+        if why ~= "reference cycle" then
+          print("expected exception reason to be 'reference cycle' for reference cycle exception")
+        end
+        if value ~= a then
+          print("expected to recieve value for reference cycle exception")
+        end
+        if exstate ~= state then
+          print("expected to recieve state for reference cycle exception")
+        end
+      end
+    end
+
+    do -- example exception handler
+      r = dkencode(function () end, { exception = require "dkjson".encodeexception })
+      if r ~= [["<type 'function' is not supported by JSON.>"]] then
+        print("expected the exception encoder to encode default error message, but got", r)
+      end
+    end
+
+    do -- test state buffer for custom __tojson function
+      local origstate = {}
+      local usedstate, usedbuffer, usedbufferlen
+      dkencode({ setmetatable({}, {
+        __tojson = function(self, state)
+          usedstate = state
+          usedbuffer = state.buffer
+          usedbufferlen = state.bufferlen
+          return true
+        end
+      }) }, origstate)
+      if usedstate ~= origstate then print("expected tojson-function to recieve the original state")  end
+      if type(usedbuffer) ~= 'table' or #usedbuffer < 1 then print("expected buffer in tojson-function to be an array") end
+      if usedbufferlen ~= 1 then print("expected bufferlen in tojson-function to be 1, but got "..tostring(usedbufferlen)) end
+    end
+
+    do -- do not keep buffer and bufferlen when they were not present initially
+      local origstate = {}
+      dkencode(setmetatable({}, {__tojson = function() return true end}), origstate)
+      if origstate.buffer ~= nil then print("expected buffer to be reset to nil") end
+      if origstate.bufferlen ~= nil then print("expected bufferlen to be reset to nil") end
+    end
+
+    do -- keep buffer and update bufferlen when they were present initially
+      local origbuffer = {}
+      local origstate = { buffer = origbuffer }
+      dkencode(true, origstate)
+      if origstate.buffer ~= origbuffer then print("expected original buffer to remain") end
+      if origstate.bufferlen ~= 1 then print("expected bufferlen to be updated") end
+    end
+  end
 end
 
 if not decode then
@@ -317,6 +434,30 @@ else
     local x,p,m = dkdecode" \n invalid "
     if p ~= 4 or type(m) ~= 'string' or not m:find("at line 2, column 2$") then
       print (("Invalid location: position=%d, message=%q"):format(p,m))
+    end
+
+    do -- single line comments
+      local x, p, m  = dkdecode [[
+{"test://" // comment // --?
+   : [  // continues
+   0]   //
+}
+]]
+      if type(x) ~= 'table' or type(x["test://"]) ~= 'table' or x["test://"][1] ~= 0 then
+        print("could not decode a string with single line comments: "..tostring(m))
+      end
+    end
+
+    do -- multi line comments
+      local x, p, m  = dkdecode [[
+{"test:/*"/**//*
+   hi! this is a comment
+*/   : [/** / **/  0]
+}
+]]
+      if type(x) ~= 'table' or type(x["test:/*"]) ~= 'table' or x["test:/*"][1] ~= 0 then
+        print("could not decode a string with multi line comments: "..tostring(m))
+      end
     end
   end
 end

@@ -1,3 +1,11 @@
+Version 2.5 (2014-04-28)
+===========
+
+Changes since version 2.4:
+
+  *  Added customizable exception handling.
+  *  Decode input that contains JavaScript comments.
+
 Version 2.4 (2013-09-28)
 ===========
 
