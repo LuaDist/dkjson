@@ -322,6 +322,7 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder, s
           if v then
             used[k] = true
             buflen, msg = addpair (k, v, prev, indent, level, buffer, buflen, tables, globalorder, state)
+            if not buflen then return nil, msg end
             prev = true -- add a seperator before the next element
           end
         end
